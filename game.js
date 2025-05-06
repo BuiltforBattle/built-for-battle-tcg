@@ -1,48 +1,47 @@
 let player1 = "";
-	let player2 = "";
-	let startingPlayer = 1;
-	let teamData = { 1: [], 2: [] };
-	let currentSetupPlayer = 1;
-    let roundWinners = ["Pending", "Pending", "Pending"];
-    let stats = {
-      1: { attacks: 0, totalDamage: 0, defenses: 0, abilities: 0, diceRolls: 0 },
-      2: { attacks: 0, totalDamage: 0, defenses: 0, abilities: 0, diceRolls: 0 }
-    };
+let player2 = "";
+let startingPlayer = 1;
+let currentTurn = 1;
+let currentRound = 1;
+let hasSwappedThisTurn = false;
+let matchOver = false;
+let currentSetupPlayer = 1;
 
-teamData[1] = [
-      { name: "", hp: 100, color: "", active: false, played: false, defense: 0, abilityUsed: false },
-      { name: "", hp: 100, color: "", active: false, played: false, defense: 0, abilityUsed: false },
-      { name: "", hp: 100, color: "", active: false, played: false, defense: 0, abilityUsed: false },
-      { name: "", hp: 100, color: "", active: false, played: false, defense: 0, abilityUsed: false }
-    ];
-    teamData[2] = [
-      { name: "", hp: 100, color: "", active: false, played: false, defense: 0, abilityUsed: false },
-      { name: "", hp: 100, color: "", active: false, played: false, defense: 0, abilityUsed: false },
-      { name: "", hp: 100, color: "", active: false, played: false, defense: 0, abilityUsed: false },
-      { name: "", hp: 100, color: "", active: false, played: false, defense: 0, abilityUsed: false }
-    ];
-    
-      
-    document.querySelectorAll('input[name="matchMode"]').forEach(radio => {
-      radio.addEventListener('change', () => {
-        const mode = document.querySelector('input[name="matchMode"]:checked').value;
-        document.getElementById('matchIdInput').style.display = (mode === 'join') ? 'block' : 'none';
-      });
-    });
-       
-    const availableCards = [
-      { name: "Bearded_Tattooed_Guy_In_GA", hp: 120, img: "https://static.wixstatic.com/media/7f810a_47547269f9a442c1be542386b9a95dbc~mv2.jpg" },
-      { name: "IGHatesChazzy", hp: 130, img: "https://static.wixstatic.com/media/7f810a_75fb02ccb3ee4229b445beafbfdba4b6~mv2.jpg" },
-      { name: "J9lives", hp: 120, img: "https://static.wixstatic.com/media/7f810a_954adcda70fe42259852a029221f0451~mv2.jpg" },
-      { name: "KiraKreates", hp: 100, img: "https://static.wixstatic.com/media/7f810a_f63e3610f25d44709d0e1817c2a87b68~mv2.jpg" },
-      { name: "KosplayKreationz", hp: 150, img: "https://static.wixstatic.com/media/7f810a_8bfa55f15aca4cfea19228a985d7108f~mv2.jpg" },
-      { name: "Num1xmncosplay", hp: 100, img: "https://static.wixstatic.com/media/7f810a_8c2b3ee0b445415da52259e9dccb8fcb~mv2.jpg" },
-      { name: "Paper.Moon.Cosplay", hp: 120, img: "https://static.wixstatic.com/media/7f810a_db8d11a28246466e91097443dbeafa18~mv2.jpg" },
-      { name: "ParadoxxCosplay", hp: 185, img: "https://static.wixstatic.com/media/7f810a_18bae39081b948f4aa2405dd42878bc9~mv2.jpg" },
-      { name: "The_Googinator", hp: 100, img: "https://static.wixstatic.com/media/7f810a_a78a4a761d38467cb4166dad685918d5~mv2.jpg" },
-      { name: "TStunningTyler", hp: 130, img: "https://static.wixstatic.com/media/7f810a_5c32325c34be479f97213b31611224d5~mv2.jpg" }
-      // 🔥 Add more here easily anytime!
-    ];
+let teamData = {
+  1: [
+    { name: "", hp: 100, color: "", active: false, played: false, defense: 0, abilityUsed: false },
+    { name: "", hp: 100, color: "", active: false, played: false, defense: 0, abilityUsed: false },
+    { name: "", hp: 100, color: "", active: false, played: false, defense: 0, abilityUsed: false },
+    { name: "", hp: 100, color: "", active: false, played: false, defense: 0, abilityUsed: false }
+  ],
+  2: [
+    { name: "", hp: 100, color: "", active: false, played: false, defense: 0, abilityUsed: false },
+    { name: "", hp: 100, color: "", active: false, played: false, defense: 0, abilityUsed: false },
+    { name: "", hp: 100, color: "", active: false, played: false, defense: 0, abilityUsed: false },
+    { name: "", hp: 100, color: "", active: false, played: false, defense: 0, abilityUsed: false }
+  ]
+};
+
+let stats = {
+  1: { attacks: 0, totalDamage: 0, defenses: 0, abilities: 0, diceRolls: 0 },
+  2: { attacks: 0, totalDamage: 0, defenses: 0, abilities: 0, diceRolls: 0 }
+};
+
+let roundWinners = ["Pending", "Pending", "Pending"];
+
+const availableCards = [
+  { name: "Bearded_Tattooed_Guy_In_GA", hp: 120, img: "https://static.wixstatic.com/media/7f810a_47547269f9a442c1be542386b9a95dbc~mv2.jpg" },
+  { name: "IGHatesChazzy", hp: 130, img: "https://static.wixstatic.com/media/7f810a_75fb02ccb3ee4229b445beafbfdba4b6~mv2.jpg" },
+  { name: "J9lives", hp: 120, img: "https://static.wixstatic.com/media/7f810a_954adcda70fe42259852a029221f0451~mv2.jpg" },
+  { name: "KiraKreates", hp: 100, img: "https://static.wixstatic.com/media/7f810a_f63e3610f25d44709d0e1817c2a87b68~mv2.jpg" },
+  { name: "KosplayKreationz", hp: 150, img: "https://static.wixstatic.com/media/7f810a_8bfa55f15aca4cfea19228a985d7108f~mv2.jpg" },
+  { name: "Num1xmncosplay", hp: 100, img: "https://static.wixstatic.com/media/7f810a_8c2b3ee0b445415da52259e9dccb8fcb~mv2.jpg" },
+  { name: "Paper.Moon.Cosplay", hp: 120, img: "https://static.wixstatic.com/media/7f810a_db8d11a28246466e91097443dbeafa18~mv2.jpg" },
+  { name: "ParadoxxCosplay", hp: 185, img: "https://static.wixstatic.com/media/7f810a_18bae39081b948f4aa2405dd42878bc9~mv2.jpg" },
+  { name: "The_Googinator", hp: 100, img: "https://static.wixstatic.com/media/7f810a_a78a4a761d38467cb4166dad685918d5~mv2.jpg" },
+  { name: "TStunningTyler", hp: 130, img: "https://static.wixstatic.com/media/7f810a_5c32325c34be479f97213b31611224d5~mv2.jpg" }
+];
+
 
 function setActiveCard(index) {
   if (matchOver) return;
