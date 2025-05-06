@@ -305,7 +305,45 @@
       <a href="https://www.builtforbattleleague.com/tcg-rules" target="_blank">View Official Game Rules</a>
     </div>
 
-    <script>
+      
+    <div class="screen" id="gameplayScreen" style="display:none;">
+      <div id="roundTracker" style="margin-bottom: 20px;"></div>
+      <h2 id="turnTitle">Player 1's Turn</h2>
+      <div id="gameMessage" style="margin: 10px 0; min-height: 24px; font-size: 1em; color: #00f2ff;"></div>
+      <div id="playerCards"></div>
+      <div id="roundResultOptions" style="margin-top: 20px;">
+      <h3>Round Result:</h3>
+      <div class="radio-group">
+    	<label><input type="radio" name="roundResult" value="win"> I Won this Round</label>
+    	<label><input type="radio" name="roundResult" value="lose"> I Lost this Round</label>
+      </div>
+    </div>
+    <div style="margin-top: 20px;">
+    	<button onclick="endRound()">End Round</button>
+      </div>
+    </div>
+
+    <div class="screen" id="winnerScreen" style="display:none;">
+      <img src="https://static.wixstatic.com/media/7f810a_210d5ec4c8f34517b7eaf24df4658344~mv2.png" alt="Built for Battle Logo" style="max-width: 200px; margin-bottom: 20px;">
+      <h1 id="finalWinnerName" style="margin-bottom: 20px;">Winner: TBD</h1>
+      <div id="finalRoundResults" style="margin-bottom: 20px;"></div>
+      <button onclick="endMatch()">Reset Match</button>
+      <button onclick="showMatchSummary()">Match Summary</button>
+    </div>
+
+    <div class="screen" id="matchSummaryScreen" style="display:none;">
+      <img src="https://static.wixstatic.com/media/7f810a_210d5ec4c8f34517b7eaf24df4658344~mv2.png" alt="Built for Battle Logo" style="max-width: 200px; margin-bottom: 20px;">
+      <h1>Match Summary</h1>
+      <div id="matchSummaryContent" style="margin-bottom: 20px;"></div>
+      <button onclick="endMatch()">Play Again</button>
+    </div>
+
+    <div id="imageModal" style="display:none;" onclick="closeModal()">
+      <img id="modalImage" src="" alt="Enlarged Image">
+    </div>
+
+
+<script>
     let player1 = "";
 	let player2 = "";
 	let startingPlayer = 1;
@@ -1122,42 +1160,6 @@ function applyDiceOutcome() {
 </script>
 
     
-<div class="screen" id="gameplayScreen" style="display:none;">
-  <div id="roundTracker" style="margin-bottom: 20px;"></div>
-  <h2 id="turnTitle">Player 1's Turn</h2>
-  <div id="gameMessage" style="margin: 10px 0; min-height: 24px; font-size: 1em; color: #00f2ff;"></div>
-  <div id="playerCards"></div>
-  <div id="roundResultOptions" style="margin-top: 20px;">
-  <h3>Round Result:</h3>
-  <div class="radio-group">
-	<label><input type="radio" name="roundResult" value="win"> I Won this Round</label>
-	<label><input type="radio" name="roundResult" value="lose"> I Lost this Round</label>
-  </div>
-</div>
-<div style="margin-top: 20px;">
-	<button onclick="endRound()">End Round</button>
-  </div>
- </div>
-
-<div class="screen" id="winnerScreen" style="display:none;">
-  <img src="https://static.wixstatic.com/media/7f810a_210d5ec4c8f34517b7eaf24df4658344~mv2.png" alt="Built for Battle Logo" style="max-width: 200px; margin-bottom: 20px;">
-  <h1 id="finalWinnerName" style="margin-bottom: 20px;">Winner: TBD</h1>
-  <div id="finalRoundResults" style="margin-bottom: 20px;"></div>
-  <button onclick="endMatch()">Reset Match</button>
-  <button onclick="showMatchSummary()">Match Summary</button>
-</div>
-
-<div class="screen" id="matchSummaryScreen" style="display:none;">
-  <img src="https://static.wixstatic.com/media/7f810a_210d5ec4c8f34517b7eaf24df4658344~mv2.png" alt="Built for Battle Logo" style="max-width: 200px; margin-bottom: 20px;">
-  <h1>Match Summary</h1>
-  <div id="matchSummaryContent" style="margin-bottom: 20px;"></div>
-  <button onclick="endMatch()">Play Again</button>
-</div>
-
-<div id="imageModal" style="display:none;" onclick="closeModal()">
-  <img id="modalImage" src="" alt="Enlarged Image">
-</div>
-  
 <script>
 let currentRound = 1;
 let hasSwappedThisTurn = false;
@@ -1179,5 +1181,6 @@ function closeModal() {
 }
   
 </script>
+
 </body>
 </html>
