@@ -440,6 +440,7 @@
     }
 
     async function testSupabaseInsert() {
+      alert("🧪 testSupabaseInsert() called");
       const { data, error } = await supabase
         .from("matches")
         .insert([
