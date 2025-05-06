@@ -320,6 +320,8 @@
     // SUPABASE AND MATCH LOGIC
       
     async function startMatch() {
+      console.log("✅ startMatch() triggered");
+
       const p1 = document.getElementById('player1Name').value.trim();
       const p2 = document.getElementById('player2Name').value.trim();
       const first = document.querySelector('input[name="firstTurn"]:checked');
