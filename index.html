@@ -342,7 +342,7 @@
       <img id="modalImage" src="" alt="Enlarged Image">
     </div>
 
-
+    
 <script>
     let player1 = "";
 	let player2 = "";
@@ -387,6 +387,9 @@
           .select("*")
           .eq("id", matchId)
           .single();
+        alert("Attempted to create match with Supabase");
+        console.log("Returned Supabase Data:", data);
+        console.log("Returned Supabase Error:", error);
 
         if (error || !data) {
           showMessage("Match not found. Please check the ID.");
@@ -434,6 +437,31 @@
       document.body.classList.remove('setup-only');
       document.body.classList.add('normal-scroll');
       showGameplayScreen();
+    }
+
+    async function testSupabaseInsert() {
+      const { data, error } = await supabase
+        .from("matches")
+        .insert([
+          {
+            team_data: { 1: [], 2: [] },
+          stats: { 1: {}, 2: {} },
+            round_winners: ["Pending", "Pending", "Pending"],
+            current_turn: 1,
+            current_round: 1,
+            match_over: false
+          }
+        ])
+        .select()
+        .single();
+
+      if (error) {
+        alert("❌ Insert Failed: " + error.message);
+        console.log("Insert Error:", error);
+      } else {
+        alert("✅ Insert Succeeded! Match ID: " + data.id);
+        console.log("Insert Data:", data);
+      }
     }
 
       
@@ -1180,7 +1208,11 @@ function closeModal() {
   document.getElementById('imageModal').style.display = 'none';
   document.body.style.overflow = '';
 }
-  
+
+  window.addEventListener("DOMContentLoaded", () => {
+    testSupabaseInsert();
+  });
+
 </script>
 
 </body>
