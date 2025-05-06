@@ -306,7 +306,17 @@
     </div>
 
     <script>
-    
+    let player1 = "";
+	let player2 = "";
+	let startingPlayer = 1;
+	let teamData = { 1: [], 2: [] };
+	let currentSetupPlayer = 1;
+    let roundWinners = ["Pending", "Pending", "Pending"];
+    let stats = {
+      1: { attacks: 0, totalDamage: 0, defenses: 0, abilities: 0, diceRolls: 0 },
+      2: { attacks: 0, totalDamage: 0, defenses: 0, abilities: 0, diceRolls: 0 }
+    };
+      
     // SUPABASE AND MATCH LOGIC
       
     async function startMatch() {
@@ -385,7 +395,6 @@
       showGameplayScreen();
     }
 
-  
       
     async function syncMatchToSupabase() {
       if (!window.matchId) {
@@ -496,16 +505,7 @@
       });
     });
  
-	let player1 = "";
-	let player2 = "";
-	let startingPlayer = 1;
-	let teamData = { 1: [], 2: [] };
-	let currentSetupPlayer = 1;
-    let roundWinners = ["Pending", "Pending", "Pending"];
-    let stats = {
-      1: { attacks: 0, totalDamage: 0, defenses: 0, abilities: 0, diceRolls: 0 },
-      2: { attacks: 0, totalDamage: 0, defenses: 0, abilities: 0, diceRolls: 0 }
-    };
+	
       
     const availableCards = [
       { name: "Bearded_Tattooed_Guy_In_GA", hp: 120, img: "https://static.wixstatic.com/media/7f810a_47547269f9a442c1be542386b9a95dbc~mv2.jpg" },
