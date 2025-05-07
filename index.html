@@ -360,7 +360,7 @@
 
         window.localMatchId = data.id;
         document.getElementById('waitingMatchId').innerText = data.id;
-        alert("Your Match ID is: " + data.id);
+        document.getElementById('waitingRoomScreen').insertAdjacentHTML('beforeend', `<p>Debug ID: ${data.id}</p>`);
         pollForOpponent();
             
       } else {
