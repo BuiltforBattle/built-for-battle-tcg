@@ -362,7 +362,12 @@
         document.getElementById('waitingMatchId').innerText = data.id;
         document.getElementById('waitingRoomScreen').insertAdjacentHTML('beforeend', `<p>Debug ID: ${data.id}</p>`);
         pollForOpponent();
-            
+
+        if (!data?.id) {
+          document.getElementById('waitingMatchId').innerText = 'Error: No ID returned';
+          return;
+        }
+
       } else {
         const { data, error } = await supabase
           .from("matches")
