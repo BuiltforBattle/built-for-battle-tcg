@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DUAL BATTLE - Beta</title>
+  <title>DUAL BATTLE 2.0 - Beta</title>
   <style>
   body {
 	font-family: 'Segoe UI', sans-serif;
@@ -264,18 +264,9 @@
   }
   </style>
 </head>
-  
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-  <script>
-    const supabase = supabase.createClient(
-      'https://dlmivckwqxkkbsysnfzy.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsbWl2Y2t3cXhra2JzeXNuZnp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY0NDc0NDUsImV4cCI6MjA2MjAyMzQ0NX0.DOeGI6BlgAoHQYlD3anHYCTH_TG4_snHegKDW5LvMTw'
-    );
-</script>
-
 <body class="setup-only">
 
-  <!-- NEW SCREEN #1: Match Join/Create Screen -->
+  <!-- SCREEN #1: Match Join/Create Screen -->
   <div class="screen" id="initialMatchScreen">
     <img src="https://static.wixstatic.com/media/7f810a_210d5ec4c8f34517b7eaf24df4658344~mv2.png" alt="Built for Battle Logo" style="max-width: 200px; margin-bottom: 20px;">
     <h1>DUAL BATTLE 2.0</h1>
@@ -316,103 +307,109 @@
     </div>
   </div>
 
-  <script>
-    async function handleMatchSetup() {
-      const name = document.getElementById('playerNameInput').value.trim();
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script>
+  const supabaseClient = supabase.createClient(
+    'https://dlmivckwqxkkbsysnfzy.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsbWl2Y2t3cXhra2JzeXNuZnp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY0NDc0NDUsImV4cCI6MjA2MjAyMzQ0NX0.DOeGI6BlgAoHQYlD3anHYCTH_TG4_snHegKDW5LvMTw'
+  );
+
+  document.querySelectorAll('input[name="matchMode"]').forEach(radio => {
+    radio.addEventListener('change', () => {
       const mode = document.querySelector('input[name="matchMode"]:checked').value;
-      const matchId = document.getElementById('matchIdInput').value.trim();
+      document.getElementById('matchIdInput').style.display = (mode === 'join') ? 'block' : 'none';
+    });
+  });
 
-      if (!name) {
-        alert("Please enter your name.");
+  async function handleMatchSetup() {
+    const name = document.getElementById('playerNameInput').value.trim();
+    const mode = document.querySelector('input[name="matchMode"]:checked').value;
+    const matchId = document.getElementById('matchIdInput').value.trim();
+
+    if (!name) {
+      alert("Please enter your name.");
+      return;
+    }
+
+    if (mode === 'join' && !matchId) {
+      alert("Please enter a match ID to join.");
+      return;
+    }
+
+    window.localPlayerName = name;
+    window.localMatchMode = mode;
+    window.localMatchId = matchId;
+
+    document.getElementById('initialMatchScreen').style.display = 'none';
+    document.getElementById('waitingRoomScreen').style.display = 'block';
+
+    if (mode === 'create') {
+      const { data, error } = await supabaseClient
+        .from("matches")
+        .insert([{
+          team_data: { 1: [{ name: name }], 2: [] },
+          stats: { 1: {}, 2: {} },
+          round_winners: ["Pending", "Pending", "Pending"],
+          current_turn: 1,
+          current_round: 1,
+          match_over: false
+        }])
+        .select()
+        .single();
+
+      if (error || !data) {
+        alert("Failed to create match: " + (error?.message || "unknown error"));
         return;
       }
 
-      if (mode === 'join' && !matchId) {
-        alert("Please enter a match ID to join.");
+      window.localMatchId = data.id;
+      document.getElementById('waitingMatchId').innerText = data.id;
+      pollForOpponent();
+
+    } else {
+      const { data, error } = await supabaseClient
+        .from("matches")
+        .update({ team_data: { 2: [{ name: name }] } })
+        .eq("id", matchId)
+        .select()
+        .single();
+
+      if (error || !data) {
+        alert("Failed to join match: " + (error?.message || "Match not found"));
         return;
       }
 
-      window.localPlayerName = name;
-      window.localMatchMode = mode;
       window.localMatchId = matchId;
+      document.getElementById('waitingMatchId').innerText = matchId;
+      pollForOpponent();
+    }
+  }
 
-      document.getElementById('initialMatchScreen').style.display = 'none';
-      document.getElementById('waitingRoomScreen').style.display = 'block';
+  async function pollForOpponent() {
+    const matchId = window.localMatchId;
+    const interval = setInterval(async () => {
+      const { data, error } = await supabaseClient
+        .from("matches")
+        .select("team_data")
+        .eq("id", matchId)
+        .single();
 
-      if (mode === 'create') {
-        const { data, error } = await supabase
-          .from("matches")
-          .insert([{
-            team_data: { 1: [{ name: name }], 2: [] },
-            stats: { 1: {}, 2: {} },
-            round_winners: ["Pending", "Pending", "Pending"],
-            current_turn: 1,
-            current_round: 1,
-            match_over: false
-          }])
-          .select()
-          .single();
-
-        if (error || !data) {
-          alert("Failed to create match: " + (error?.message || "unknown error"));
-          return;
-        }
-
-        window.localMatchId = data.id;
-        document.getElementById('waitingMatchId').innerText = data.id;
-        document.getElementById('waitingRoomScreen').insertAdjacentHTML('beforeend', `<p>Debug ID: ${data.id}</p>`);
-        pollForOpponent();
-
-        if (!data?.id) {
-          document.getElementById('waitingMatchId').innerText = 'Error: No ID returned';
-          return;
-        }
-
-      } else {
-        const { data, error } = await supabase
-          .from("matches")
-          .update({ team_data: { 2: [{ name: name }] } })
-          .eq("id", matchId)
-          .select()
-          .single();
-
-        if (error || !data) {
-          alert("Failed to join match: " + (error?.message || "Match not found"));
-          return;
-        }
-
-        window.localMatchId = matchId;
-        document.getElementById('waitingMatchId').innerText = matchId;
-        pollForOpponent();
+      if (data && data.team_data[1]?.length && data.team_data[2]?.length) {
+        clearInterval(interval);
+        document.getElementById('waitingRoomScreen').style.display = 'none';
+        document.getElementById('setupScreen').style.display = 'block';
+        document.getElementById('player1Name').value = data.team_data[1][0].name || "";
+        document.getElementById('player2Name').value = data.team_data[2][0].name || "";
+        document.getElementById('matchCodeDisplay').innerText = `Match ID: ${matchId}`;
       }
-    }
+    }, 2000);
+  }
 
-    async function pollForOpponent() {
-      const matchId = window.localMatchId;
-      const interval = setInterval(async () => {
-        const { data, error } = await supabase
-          .from("matches")
-          .select("team_data")
-          .eq("id", matchId)
-          .single();
-
-        if (data && data.team_data[1]?.length && data.team_data[2]?.length) {
-          clearInterval(interval);
-          document.getElementById('waitingRoomScreen').style.display = 'none';
-          document.getElementById('setupScreen').style.display = 'block';
-          document.getElementById('player1Name').value = data.team_data[1][0].name || "";
-          document.getElementById('player2Name').value = data.team_data[2][0].name || "";
-          document.getElementById('matchCodeDisplay').innerText = `Match ID: ${matchId}`;
-        }
-      }, 2000);
-    }
-
-    function copyMatchId() {
-      const text = document.getElementById('waitingMatchId').innerText;
-      if (!text) return;
-      navigator.clipboard.writeText(text).then(() => alert("Match ID copied!"));
-    }
-  </script>
-
+  function copyMatchId() {
+    const text = document.getElementById('waitingMatchId').innerText;
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => alert("Match ID copied!"));
+  }
+</script>
 </body>
 </html>
