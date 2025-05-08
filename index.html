@@ -325,11 +325,22 @@
 
   <!-- SCREEN #4: Select Active Player -->
   <div class="screen" id="selectActiveScreen" style="display: none;">
-    <h2 id="activeSelectHeader">Select Your Active Player</h2>
-    <div id="activeCardOptions" class="active-card-container">
-      <!-- Cards will be dynamically rendered here -->
+    <div id="roundTracker" style="margin-bottom: 20px;"></div>
+    <h2 id="turnTitle">Player 1's Turn</h2>
+    <div id="gameMessage" style="margin: 10px 0; min-height: 24px; font-size: 1em; color: #00f2ff;"></div>
+    <div id="playerCards"></div>
+    <div id="roundResultOptions" style="margin-top: 20px;">
+    <h3>Round Result:</h3>
+    <div class="radio-group">
+    <label><input type="radio" name="roundResult" value="win"> I Won this Round</label>
+  	<label><input type="radio" name="roundResult" value="lose"> I Lost this Round</label>
     </div>
   </div>
+  <div style="margin-top: 20px;">
+	<button onclick="endRound()">End Round</button>
+    </div>
+   </div>
+
 
   <!-- SCREEN #5: Gameplay Screen -->
   <div class="screen" id="gameplayScreen" style="display: none;">
@@ -366,6 +377,24 @@
     <button onclick="endTurn()">End Turn</button>
   </div>
 
+  <div class="screen" id="winnerScreen" style="display:none;">
+    <img src="https://static.wixstatic.com/media/7f810a_210d5ec4c8f34517b7eaf24df4658344~mv2.png" alt="Built for Battle Logo" style="max-width: 200px; margin-bottom: 20px;">
+    <h1 id="finalWinnerName" style="margin-bottom: 20px;">Winner: TBD</h1>
+    <div id="finalRoundResults" style="margin-bottom: 20px;"></div>
+    <button onclick="endMatch()">Reset Match</button>
+    <button onclick="showMatchSummary()">Match Summary</button>
+  </div>
+
+  <div class="screen" id="matchSummaryScreen" style="display:none;">
+    <img src="https://static.wixstatic.com/media/7f810a_210d5ec4c8f34517b7eaf24df4658344~mv2.png" alt="Built for Battle Logo" style="max-width: 200px; margin-bottom: 20px;">
+    <h1>Match Summary</h1>
+    <div id="matchSummaryContent" style="margin-bottom: 20px;"></div>
+    <button onclick="endMatch()">Play Again</button>
+  </div>
+
+  <div id="imageModal" style="display:none;" onclick="closeModal()">
+    <img id="modalImage" src="" alt="Enlarged Image">
+  </div>
   
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script>
@@ -475,7 +504,7 @@
       pollForOpponent();
     }
   }
-
+  
   function copyMatchId() {
     const text = document.getElementById('waitingMatchId').innerText;
     if (!text) return;
@@ -642,7 +671,520 @@
     document.getElementById("currentRound").innerText = "1";
   }
 
+  function updateGameplayView() {
+    hasSwappedThisTurn = false;
+    const player = currentTurn;
+    const playerName = player === 1 ? player1 : player2;
+    // Update Round Tracker
+  let trackerHTML = "<h3>Round Results:</h3><p>";
+  for (let i = 0; i < 3; i++) {
+    if (roundWinners[i] === "Pending") {
+      trackerHTML += `Round ${i + 1}: Pending ⏳`;
+    } else {
+      trackerHTML += `Round ${i + 1}: ${roundWinners[i]} (Win)`;
+    }
+    if (i < 2) trackerHTML += " | ";
+  }
+  trackerHTML += "</p>";
+  document.getElementById('roundTracker').innerHTML = trackerHTML;
+    document.getElementById('turnTitle').innerText = `Round ${currentRound} - ${playerName}'s Turn`;
+    const cardArea = document.getElementById('playerCards');
+    cardArea.innerHTML = '';
+
+    const activeCard = teamData[player].find(card => card.active);
+    const benchedCards = teamData[player].map((card, i) => ({ ...card, originalIndex: i })).filter(card => !card.active);
+    const screen = document.querySelector('.screen');
+  	screen.style.boxShadow = player === 1
+    	? '0 0 20px rgba(230, 36, 41, 0.7)'  // Red for Player 1
+    	: '0 0 20px rgba(0, 123, 255, 0.7)'; // Blue for Player 2
+
+ 
+    if (activeCard) {
+    const i = teamData[player].indexOf(activeCard);
+    cardArea.innerHTML += `
+    <h3 style='margin-bottom: 10px; border-bottom: 1px solid #e62429; padding-bottom: 5px;'>Active Player Area</h3>
+    <div class="active-card-container" style="border: 2px solid ${player === 1 ? '#e62429' : '#007bff'}; box-shadow: 0 0 15px ${player === 1 ? '#e62429' : '#007bff'};">
+      <div class="active-card-image">
+        ${activeCard.img ? `<img src="${activeCard.img}" alt="${activeCard.name}" onclick="enlargeImage('${activeCard.img}')" class="${player === 1 ? 'red-pulse' : 'blue-pulse'}">` : ''}
+      </div>
+      <div class="active-card-info">
+        <h4>${activeCard.name} (Slot ${i + 1})</h4>
+        <p>HP: <span id="hpDisplay${i}">${activeCard.hp}</span></p>
+        ${activeCard.defense > 0 ? `<p>Defense: ${activeCard.defense} 🛡️</p>` : ''}
+ 	 
+      <div class="button-group">
+       	<button class="${player === 1 ? 'player1' : 'player2'}" onclick="adjustHP(${player}, ${i}, 10)">+10</button>
+     	<button class="${player === 1 ? 'player1' : 'player2'}" onclick="adjustHP(${player}, ${i}, 5)">+5</button>
+     	<button class="${player === 1 ? 'player1' : 'player2'}" onclick="adjustHP(${player}, ${i}, -5)">-5</button>
+     	<button class="${player === 1 ? 'player1' : 'player2'}" onclick="adjustHP(${player}, ${i}, -10)">-10</button>
+      </div>
+
+      <div class="button-group">
+    	<button class="${player === 1 ? 'player1' : 'player2'}" onclick="activateDefense()">Defend</button>
+    	<button class="${player === 1 ? 'player1' : 'player2'}" onclick="defenseBreak()">Defense Break</button>
+      </div>
+
+      <div class="button-group">
+          <input type="number" id="attackInput${i}" placeholder="Attack Amount" style="width: 100px;">
+          <button class="${player === 1 ? 'player1' : 'player2'}" onclick="quickAttack(${i}, 25)">+25</button>
+          <button class="${player === 1 ? 'player1' : 'player2'}" onclick="performAttack(${i})">Attack</button>
+      </div>
+
+
+      <div class="button-group">
+    	<select id="diceOutcomeSelect" style="padding: 8px; width: 200px;">
+        	<option value="">Dice Roll Outcome</option>
+        	<option value="1">1 - Health Gain (+10 HP All Cards)</option>
+        	<option value="2">2 - Health Lost (-10 HP Opponent Cards)</option>
+        	<option value="3">3 - Defense Break (-10 Opponent Defense)</option>
+        	<option value="4">4 - Defense Gain (+10 Defense Active)</option>
+        	<option value="5">5 - Attack Swap (Use Opponent Basic Attack)</option>
+        	<option value="6">6 - Power Attack (Use Special Attack Free)</option>
+      </select>
+    	<button class="${player === 1 ? 'player1' : 'player2'}" onclick="applyDiceOutcome()">Apply Dice Outcome</button>
+      </div>
+
+      <div class="button-group">
+        <button id="abilityButton" class="${player === 1 ? 'player1' : 'player2'}" onclick="activateAbility()" ${activeCard.abilityUsed ? 'disabled' : ''}>
+          Activate Ability
+        </button>
+      </div>
+
+      <div class="button-group">
+    	<button class="${player === 1 ? 'player1' : 'player2'}" onclick="endTurn()">End Turn</button>
+      </div>
+
+      <p>Color: ${activeCard.color || 'None'} ${activeCard.played ? '<span style="color: orange; font-weight: bold;">(Played)</span>' : ''}</p>
+	</div>
+	<hr style='border: 1px solid white; width: 90%; margin: 40px auto;'>
+      </div>
+  </div>
+    `;
+    
+  }
+
+    cardArea.innerHTML += `<h3 style='margin: 40px 0 10px 0; border-bottom: 1px solid #ccc; padding-bottom: 5px;'>Benched Player Area</h3>`;
+    benchedCards.forEach(card => {
+    const i = card.originalIndex;
+    cardArea.innerHTML += `
+      <div class="card-entry ${card.hp <= 0 ? 'defeated-card' : ''}" id="card${i}" style="border: 2px solid ${card.color || '#cccccc'}; box-shadow: 0 0 10px ${card.color || '#cccccc'}; background: ${!card.played ? 'rgba(100,100,100,0.5)' : 'rgba(60,60,60,0.9)'};">
+        ${card.hp <= 0 ? '<div class="defeated-stamp">DEFEATED</div>' : ''}
+      
+        <div class="active-card-container">
+          <div class="active-card-image">
+            ${
+              !card.played
+                ? `<img src="https://static.wixstatic.com/media/7f810a_18401a2529594f189b64c4680a19c0a4~mv2.png" alt="Card Back" style="max-width:80%; border-radius:10px;">`
+                : `${card.img ? `<img src="${card.img}" alt="${card.name}" style="max-width:80%; border-radius:10px;">` : ''}`
+            }
+          </div>
+
+          <div class="active-card-info">
+            <h4>Benched Player (Slot ${i + 1}) ${!card.played ? '<span style="font-size: 0.8em; color: #ccc;">(Face Down)</span>' : ''}</h4>
+
+            ${!card.played ? `
+              <select onchange="selectCard(${player}, ${i}, this.value)">
+                <option value="">Select Character</option>
+                ${availableCards.map(c => `<option value="${c.name}">${c.name} (HP: ${c.hp})</option>`).join('')}
+              </select>
+              <input type="text" id="nameInput${player}_${i}" value="${card.name}" onchange="updateCardName(${player}, ${i}, this.value)">
+              <input type="number" id="hpInput${player}_${i}" value="${card.hp}" onchange="updateCardHP(${player}, ${i}, this.value)">
+              <select id="colorInput${player}_${i}" onchange="updateCardColor(${player}, ${i}, this.value)">
+                <option value="">⚪ No Color</option>
+                <option value="red">🔴 Red</option>
+                <option value="blue">🔵 Blue</option>
+                <option value="green">🟢 Green</option>
+                <option value="yellow">🟡 Yellow</option>
+              </select>
+            ` : `
+              <h4>${card.name}</h4>
+              <p>HP: <span id="hpDisplay${i}">${card.hp}</span></p>
+            `}
+          
+            <p>Color: ${card.color || 'None'} ${card.played ? '<span style="color: orange; font-weight: bold;">(Played)</span>' : ''}</p>
+
+            ${!activeCard ? `
+              ${card.hp > 0 ? `<button onclick="setActiveCard(${i})">Set Active</button>` : ''}
+            ` : `
+              <button onclick="swapCard(${i})">Swap</button>
+              ${!card.played ? `<button onclick="replaceWithNewCard(${i})">Swap with New Card</button>` : ''}
+            `}
+          </div>
+        </div>
+      </div>
+    `;
+  });
+  }
+
+  function selectCard(player, index, selectedName) {
+    const selected = availableCards.find(c => c.name === selectedName);
+    if (selected) {
+      teamData[player][index].name = selected.name;
+      teamData[player][index].hp = selected.hp;
+      teamData[player][index].img = selected.img || ""; // Save the image if available
+    
+      document.getElementById(`nameInput${player}_${index}`).value = selected.name;
+      document.getElementById(`hpInput${player}_${index}`).value = selected.hp;
+      updateGameplayView();
+    }
+  }
+
+  function enlargeImage(src) {
+    const modal = document.getElementById('imageModal');
+    const modalImg = document.getElementById('modalImage');
+    modalImg.src = src;
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden
+  }
+    
+  function closeModal() {
+    document.getElementById('imageModal').style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  function bothPlayersHaveActive() {
+    const p1Active = teamData[1].some(card => card.active);
+    const p2Active = teamData[2].some(card => card.active);
+    return p1Active && p2Active;
+  }
+
+  function endMatch() {
+    location.reload();
+  }
+
+  function declareWinner() {
+    let player1Wins = 0;
+    let player2Wins = 0;
+
+    for (let i = 0; i < 3; i++) {
+      if (roundWinners[i] === player1) player1Wins++;
+      if (roundWinners[i] === player2) player2Wins++;
+    }
+
+    let winnerName = "";
+    if (player1Wins > player2Wins) {
+      winnerName = player1;
+    } else if (player2Wins > player1Wins) {
+      winnerName = player2;
+    } else {
+      winnerName = "It's a Tie!";
+    }
+
+  // Hide gameplay, show winner screen
+  document.getElementById('gameplayScreen').style.display = 'none';
+  document.getElementById('winnerScreen').style.display = 'block';
+
+  // Update final winner name
+  document.getElementById('finalWinnerName').innerText = `Winner: ${winnerName}`;
+  document.getElementById('finalWinnerName').classList.add('flash-gold');
+
+  // Build round results nicely
+  let resultsHTML = "<h3>Round Results:</h3><ul>";
+  for (let i = 0; i < 3; i++) {
+    resultsHTML += `<li>Round ${i + 1}: ${roundWinners[i]}</li>`;
+  }
+  resultsHTML += "</ul>";
+  document.getElementById('finalRoundResults').innerHTML = resultsHTML;
+
+  matchOver = true;
+}
   
+  function showMatchSummary() {
+    document.getElementById('winnerScreen').style.display = 'none';
+    document.getElementById('matchSummaryScreen').style.display = 'block';
+
+    let summaryHTML = `
+      <h2>${player1} vs ${player2}</h2>
+      <h3>Final Winner: ${document.getElementById('finalWinnerName').innerText.replace('Winner: ', '')}</h3>
+      <h3>Round Results:</h3>
+      <ul>
+        <li>Round 1: ${roundWinners[0]}</li>
+        <li>Round 2: ${roundWinners[1]}</li>
+        <li>Round 3: ${roundWinners[2]}</li>
+      </ul>
+      <h3>Battle Stats:</h3>
+      <div style="text-align:left;">
+        <h4>${player1}:</h4>
+        <ul>
+          <li>⚔️ Attacks Used: ${stats[1].attacks}</li>
+          <li>💥 Total Damage Dealt: ${stats[1].totalDamage}</li>
+          <li>🛡️ Defenses Used: ${stats[1].defenses}</li>
+          <li>✨ Abilities Activated: ${stats[1].abilities}</li>
+          <li>🎲 Dice Rolls Used: ${stats[1].diceRolls}</li>
+        </ul>
+        <h4>${player2}:</h4>
+        <ul>
+          <li>⚔️ Attacks Used: ${stats[2].attacks}</li>
+          <li>💥 Total Damage Dealt: ${stats[2].totalDamage}</li>
+          <li>🛡️ Defenses Used: ${stats[2].defenses}</li>
+          <li>✨ Abilities Activated: ${stats[2].abilities}</li>
+          <li>🎲 Dice Rolls Used: ${stats[2].diceRolls}</li>
+        </ul>
+      </div>
+    `;
+
+    document.getElementById('matchSummaryContent').innerHTML = summaryHTML;
+  }
+  
+  
+  function setActiveCard(index) {
+    if (matchOver) return;
+  
+    teamData[currentTurn].forEach((card, i) => {
+      card.active = i === index;
+      if (card.active) card.played = true;
+    });
+
+    if (!bothPlayersHaveActive()) {
+      // If the other player hasn't chosen their Active Player yet
+      endTurn(); // Immediately pass the turn
+    } else {
+      // Both players now have Active Cards — force currentTurn to startingPlayer
+      currentTurn = startingPlayer;
+      updateGameplayView();
+    }
+  }
+
+  function swapCard(index) {
+    if (matchOver) return;
+
+    const activeIndex = teamData[currentTurn].findIndex(card => card.active);
+    const activeCard = teamData[currentTurn][activeIndex];
+    const benchedCard = teamData[currentTurn][index];
+
+    if (benchedCard.hp <= 0) {
+      showMessage("This card has been defeated and cannot be swapped in.");
+      return;
+    }
+
+    if (hasSwappedThisTurn) {
+      showMessage("You have already swapped this turn.");
+      return;
+    }
+
+    hasSwappedThisTurn = true;
+    showMessage("Swapped! Turn ended automatically.");
+
+    // Swap active status
+    teamData[currentTurn].forEach(card => card.active = false);
+    teamData[currentTurn][index].active = true;
+    teamData[currentTurn][index].played = true;
+
+    endTurn(); // End turn after swap
+  }
+
+  function activateDefense() {
+    if (matchOver) return;
+    const activeCard = teamData[currentTurn].find(card => card.active);
+    if (activeCard) {
+    	activeCard.defense += 10; // You can stack the amount
+    	showMessage(`${activeCard.name} is now defending (+10)!`);
+    	stats[currentTurn].defenses++;
+      updateGameplayView();
+      await saveMatchState();
+    }
+  }
+
+  function defenseBreak() {
+    if (matchOver) return;
+ 
+    const opponent = currentTurn === 1 ? 2 : 1;
+    const activeCard = teamData[opponent].find(card => card.active);
+ 
+    if (activeCard) {
+  	if (activeCard.defense > 0) {
+    	activeCard.defense = Math.max(0, activeCard.defense - 10); // Lower defense by 10
+    	showMessage(`Defense Break successful! ${activeCard.name}'s defense was reduced by 10.`);
+    	} else {
+    	showMessage(`No active defense to break on ${activeCard.name}.`);
+    	}
+    	updateGameplayView();
+    	await saveMatchState();
+    }
+  }
+
+  function performAttack(i) {
+    if (matchOver) return;
+    const input = document.getElementById(`attackInput${i}`);
+    const damage = parseInt(input.value);
+    if (!isNaN(damage) && damage > 0) {
+    stats[currentTurn].attacks++; // <-- MOVE THIS HERE
+    attackOpponent(damage);
+    input.value = '';
+    } else {
+    showMessage("Enter a valid attack amount!");
+    await saveMatchState();
+    }
+  }
+
+  function quickAttack(index, amount) {
+    if (matchOver) return;
+    const input = document.getElementById(`attackInput${index}`);
+    if (input) {
+      input.value = amount;
+    }
+  }
+  
+  function attackOpponent(damageAmount) {
+    if (matchOver) return;
+    const opponent = currentTurn === 1 ? 2 : 1;
+    const activeCard = teamData[opponent].find(card => card.active);
+    if (activeCard) {
+    	let effectiveDamage = damageAmount;
+
+    if (activeCard.defense > 0) {
+      effectiveDamage = Math.max(0, damageAmount - activeCard.defense);
+    	activeCard.defense = 0; // Defense is used up after blocking
+  	}
+
+    activeCard.hp = Math.max(0, activeCard.hp - effectiveDamage);
+    stats[currentTurn].totalDamage += effectiveDamage;
+    
+    if (effectiveDamage > 0) {
+      showMessage(`💥 Attack successful! Dealt ${effectiveDamage} damage to ${activeCard.name}.`);
+    } else {
+      showMessage(`🛡️ Attack blocked! ${activeCard.name} took no damage.`);
+    }
+
+    if (activeCard.hp === 0) {
+      activeCard.active = false; // Auto remove active status if defeated
+      showMessage(`${activeCard.name} has been defeated!`);
+    }
+    const allDefeated = teamData[opponent].every(card => card.hp <= 0);
+
+    if (allDefeated) {
+    showMessage(`${currentTurn === 1 ? player1 : player2} wins the round by defeating all opponent cards!`);
+  
+    // Auto-select Win
+    document.querySelector('input[name="roundResult"][value="win"]').checked = true;
+    endRound();
+   }
+      updateGameplayView();
+    }
+  }
+
+  function activateAbility() {
+    if (matchOver) return;
+    const activeCard = teamData[currentTurn].find(card => card.active);
+
+    if (activeCard && !activeCard.abilityUsed) {
+      activeCard.abilityUsed = true;
+      showMessage(`${activeCard.name} activated their Ability!`);
+
+      // Find and animate the Ability button
+      const abilityBtn = document.getElementById('abilityButton');
+      if (abilityBtn) {
+        abilityBtn.classList.add('flash-green');
+        setTimeout(() => {
+          abilityBtn.classList.remove('flash-green');
+        }, 1000); // Remove after animation
+      }
+      stats[currentTurn].abilities++;
+
+      updateGameplayView();
+    } else {
+      showMessage("Ability already used this round.");
+      await saveMatchState();
+    }
+  }
+  
+  function applyDiceOutcome() {
+    if (matchOver) return;
+
+    const selected = document.getElementById('diceOutcomeSelect').value;
+    if (!selected) {
+    	showMessage("Please select a Dice Roll outcome first!");
+    	return;
+    }
+
+    const roll = parseInt(selected);
+    const player = currentTurn;
+    const opponent = currentTurn === 1 ? 2 : 1;
+
+    switch (roll) {
+    	case 1: // Health Gain
+    	teamData[player].forEach(card => {
+        	card.hp += 10;
+    	});
+    	showMessage("All your cards gained +10 HP!");
+    	break;
+
+    	case 2: // Health Lost
+    	teamData[opponent].forEach(card => {
+      	card.hp = Math.max(0, card.hp - 10);
+    	});
+    	showMessage("Opponent’s team lost -10 HP!");
+    	break;
+
+    	case 3: // Defense Break
+    	const oppActive = teamData[opponent].find(card => card.active);
+    	if (oppActive) {
+        	if (oppActive.defense > 0) {
+        	oppActive.defense = Math.max(0, oppActive.defense - 10);
+        	showMessage("Defense Break! Opponent's Active Player defense reduced by 10.");
+      	} else {
+        	showMessage("No defense to break! You may add +10 bonus to your next attack.");
+        	// Optional: Set a bonus attack flag here if you want later
+      	}
+    	}
+    	break;
+
+    	case 4: // Defense Gain
+    	const myActive = teamData[player].find(card => card.active);
+    	if (myActive) {
+        	myActive.defense += 10;
+        	showMessage("Defense Gain! Your Active Player gained +10 defense.");
+    	}
+    	break;
+
+    	case 5: // Attack Swap
+    	showMessage("Attack Swap! Use opponent's Active Player Basic Attack for your next attack.");
+    	// Optional: Implement Attack Swap logic later
+    	break;
+
+    	case 6: // Power Attack
+    	showMessage("Power Boost! You may use Special Attack without action cards.");
+    	// Optional: Flag Special Attack available next turn
+    	break;
+    }
+      stats[currentTurn].diceRolls++;
+
+    updateGameplayView();
+    await saveMatchState();
+  }
+
+  async function saveMatchState() {
+    const matchId = window.localMatchId;
+    const { error } = await supabaseClient
+      .from("matches")
+      .update({
+        team_data: teamData,
+        stats: stats,
+        current_turn: currentTurn,
+        current_round: currentRound,
+        round_winners: roundWinners,
+        match_over: matchOver
+     })
+      .eq("id", matchId);
+
+    if (error) {
+      console.error("Failed to save match state:", error.message);
+    }
+  }
+
+  function endTurn() {
+    if (matchOver) return;
+    currentTurn = currentTurn === 1 ? 2 : 1;
+    const hasActive = teamData[currentTurn].some(card => card.active && card.hp > 0);
+
+    if (!hasActive) {
+      showMessage("No Active Card! Please select a new Active Player.");
+    }
+
+    updateGameplayView();
+    await saveMatchState();
+  }
+
 </script>
 </body>
 </html>
