@@ -64,6 +64,14 @@
   label {
 	font-size: 1em;
   }
+
+  input[readonly] {
+  background-color: #333;
+  color: #fff;
+  font-weight: bold;
+  text-align: center;
+  }
+    
   .card-entry {
 	background: rgba(60, 60, 60, 0.9);
 	margin: 10px auto;
@@ -228,7 +236,7 @@
     100% { box-shadow: 0 0 10px #e62429; }
   }
 
-@keyframes bluePulse {
+  @keyframes bluePulse {
     0% { box-shadow: 0 0 10px #007bff; }
     50% { box-shadow: 0 0 20px #007bff; }
     100% { box-shadow: 0 0 10px #007bff; }
@@ -290,9 +298,18 @@
 
   <!-- SCREEN #3: Setup Screen -->
   <div class="screen" id="setupScreen" style="display: none;">
+    <img src="https://static.wixstatic.com/media/7f810a_210d5ec4c8f34517b7eaf24df4658344~mv2.png" alt="Built for Battle Logo" style="max-width: 200px; margin-bottom: 20px;">
+    <h1>DUAL BATTLE 2.0</h1>
     <h2>Pre-Game Setup</h2>
-    <input type="text" id="player1Name" placeholder="Enter Player 1 Name">
-    <input type="text" id="player2Name" placeholder="Enter Player 2 Name">
+    <div style="margin-bottom: 10px;">
+      <label for="player1Name" style="display: block; font-weight: bold;">Player 1</label>
+      <input type="text" id="player1Name" readonly>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+      <label for="player2Name" style="display: block; font-weight: bold;">Player 2</label>
+      <input type="text" id="player2Name" readonly>
+    </div>
     <div>
       <p>Who goes first?</p>
       <div class="radio-group">
@@ -302,11 +319,54 @@
     </div>
     <button onclick="startMatch()">Start Match</button>
     <div style="margin-top: 40px; font-size: 0.9em;">
-      <p id="matchCodeDisplay" class="flash-gold" style="margin-bottom: 10px;"></p>
       <a href="https://www.builtforbattleleague.com/tcg-rules" target="_blank">View Official Game Rules</a>
     </div>
   </div>
 
+  <!-- SCREEN #4: Select Active Player -->
+  <div class="screen" id="selectActiveScreen" style="display: none;">
+    <h2 id="activeSelectHeader">Select Your Active Player</h2>
+    <div id="activeCardOptions" class="active-card-container">
+      <!-- Cards will be dynamically rendered here -->
+    </div>
+  </div>
+
+  <!-- SCREEN #5: Gameplay Screen -->
+  <div class="screen" id="gameplayScreen" style="display: none;">
+    <h2>Round <span id="currentRound">1</span></h2>
+
+    <div id="playerCards">
+      <!-- Player 1 Active Card -->
+      <div class="active-card-container" id="player1Card" style="margin-bottom: 30px;">
+        <div class="active-card-image"><img id="p1CardImage" src="" alt="" /></div>
+        <div class="active-card-info">
+          <h4 id="p1CardName"></h4>
+          <p>HP: <span id="p1CardHP"></span></p>
+          <div class="button-group">
+            <button class="player1" onclick="adjustHP(1, -10)">-10 HP</button>
+            <button class="player1" onclick="adjustHP(1, 10)">+10 HP</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Player 2 Active Card -->
+      <div class="active-card-container" id="player2Card">
+        <div class="active-card-image"><img id="p2CardImage" src="" alt="" /></div>
+        <div class="active-card-info">
+          <h4 id="p2CardName"></h4>
+          <p>HP: <span id="p2CardHP"></span></p>
+          <div class="button-group">
+            <button class="player2" onclick="adjustHP(2, -10)">-10 HP</button>
+            <button class="player2" onclick="adjustHP(2, 10)">+10 HP</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button onclick="endTurn()">End Turn</button>
+  </div>
+
+  
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script>
   const supabaseClient = supabase.createClient(
@@ -314,6 +374,23 @@
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRsbWl2Y2t3cXhra2JzeXNuZnp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY0NDc0NDUsImV4cCI6MjA2MjAyMzQ0NX0.DOeGI6BlgAoHQYlD3anHYCTH_TG4_snHegKDW5LvMTw'
   );
 
+  const availableCards = [
+    { name: "Bearded_Tattooed_Guy_In_GA", hp: 120, img: "https://static.wixstatic.com/media/7f810a_47547269f9a442c1be542386b9a95dbc~mv2.jpg" },
+    { name: "IGHatesChazzy", hp: 130, img: "https://static.wixstatic.com/media/7f810a_75fb02ccb3ee4229b445beafbfdba4b6~mv2.jpg" },
+    { name: "J9lives", hp: 120, img: "https://static.wixstatic.com/media/7f810a_954adcda70fe42259852a029221f0451~mv2.jpg" },
+    { name: "KiraKreates", hp: 100, img: "https://static.wixstatic.com/media/7f810a_f63e3610f25d44709d0e1817c2a87b68~mv2.jpg" },
+    { name: "KosplayKreationz", hp: 150, img: "https://static.wixstatic.com/media/7f810a_8bfa55f15aca4cfea19228a985d7108f~mv2.jpg" },
+    { name: "Num1xmncosplay", hp: 100, img: "https://static.wixstatic.com/media/7f810a_8c2b3ee0b445415da52259e9dccb8fcb~mv2.jpg" },
+    { name: "Paper.Moon.Cosplay", hp: 120, img: "https://static.wixstatic.com/media/7f810a_db8d11a28246466e91097443dbeafa18~mv2.jpg" },
+    { name: "ParadoxxCosplay", hp: 185, img: "https://static.wixstatic.com/media/7f810a_18bae39081b948f4aa2405dd42878bc9~mv2.jpg" },
+    { name: "The_Googinator", hp: 100, img: "https://static.wixstatic.com/media/7f810a_a78a4a761d38467cb4166dad685918d5~mv2.jpg" },
+    { name: "TStunningTyler", hp: 130, img: "https://static.wixstatic.com/media/7f810a_5c32325c34be479f97213b31611224d5~mv2.jpg" }
+  ];
+
+  let teamData = { 1: [], 2: [] };
+  let startingPlayer = 1;
+  let currentSetupPlayer = 1;
+  
   document.querySelectorAll('input[name="matchMode"]').forEach(radio => {
     radio.addEventListener('change', () => {
       const mode = document.querySelector('input[name="matchMode"]:checked').value;
@@ -354,62 +431,218 @@
           current_round: 1,
           match_over: false
         }])
-        .select()
-        .single();
+      .select()
+      .single();
 
-      if (error || !data) {
-        alert("Failed to create match: " + (error?.message || "unknown error"));
-        return;
-      }
+    if (error || !data) {
+      alert("Failed to create match: " + (error?.message || "unknown error"));
+      return;
+    }
 
-      window.localMatchId = data.id;
-      document.getElementById('waitingMatchId').innerText = data.id;
-      pollForOpponent();
+    window.localMatchId = data.id;
+    document.getElementById('waitingMatchId').innerText = data.id;
+    pollForOpponent();
+  }
 
-    } else {
-      const { data, error } = await supabaseClient
+    else {
+      const { data: existingMatch, error: fetchError } = await supabaseClient
         .from("matches")
-        .update({ team_data: { 2: [{ name: name }] } })
+        .select("team_data")
         .eq("id", matchId)
-        .select()
         .single();
 
-      if (error || !data) {
+      if (fetchError || !existingMatch) {
         alert("Failed to join match: " + (error?.message || "Match not found"));
         return;
       }
 
+      const updatedTeamData = existingMatch.team_data || {};
+      updatedTeamData[2] = [{ name: name }];
+
+      const { data: updatedMatch, error: updatedError } = await supabaseClient
+        .from("matches")
+        .update({ team_data: updatedTeamData })
+        .eq("id", matchId)
+        .select("team_data")
+        .single();
+
+      if (updatedError || !updatedMatch) {
+        alert("Failed to join match: " + (error?.message || "Update failed"));
+        return;
+      }
       window.localMatchId = matchId;
       document.getElementById('waitingMatchId').innerText = matchId;
       pollForOpponent();
     }
   }
 
+  function copyMatchId() {
+    const text = document.getElementById('waitingMatchId').innerText;
+    if (!text) return;
+    try {
+      navigator.clipboard.writeText(text).then(() => {
+        alert("Match ID copied!");
+      }).catch(() => {
+        prompt("Copy this Match ID manually:", text);
+      });
+    } catch (err) {
+      prompt("Copy this Match ID manually:", text);
+    }
+  }
+  
   async function pollForOpponent() {
     const matchId = window.localMatchId;
     const interval = setInterval(async () => {
-      const { data, error } = await supabaseClient
+      const { data: existingMatch, error: fetchError } = await supabaseClient
         .from("matches")
         .select("team_data")
         .eq("id", matchId)
         .single();
 
-      if (data && data.team_data[1]?.length && data.team_data[2]?.length) {
+      if (existingMatch && existingMatch.team_data[1]?.length && existingMatch.team_data[2]?.length) {
         clearInterval(interval);
         document.getElementById('waitingRoomScreen').style.display = 'none';
         document.getElementById('setupScreen').style.display = 'block';
-        document.getElementById('player1Name').value = data.team_data[1][0].name || "";
-        document.getElementById('player2Name').value = data.team_data[2][0].name || "";
-        document.getElementById('matchCodeDisplay').innerText = `Match ID: ${matchId}`;
+        document.getElementById('player1Name').value = existingMatch.team_data[1][0].name || "";
+        document.getElementById('player2Name').value = existingMatch.team_data[2][0].name || "";
       }
     }, 2000);
   }
 
-  function copyMatchId() {
-    const text = document.getElementById('waitingMatchId').innerText;
-    if (!text) return;
-    navigator.clipboard.writeText(text).then(() => alert("Match ID copied!"));
+  function startMatch() {
+    const selectedRadio = document.querySelector('input[name="firstTurn"]:checked');
+    if (!selectedRadio) {
+      alert("Please select who goes first.");
+      return;
+    }
+
+    startingPlayer = parseInt(selectedRadio.value);
+
+    // Hide the setup screen and show the select active player screen
+    document.getElementById('setupScreen').style.display = 'none';
+    document.getElementById('selectActiveScreen').style.display = 'block';
+
+    // Prepare team data for each player (if not already set)
+    if (!teamData[1] || teamData[1].length === 0) {
+      teamData[1] = [
+        { name: "Card 1", hp: 100, active: false, played: false },
+        { name: "Card 2", hp: 100, active: false, played: false },
+        { name: "Card 3", hp: 100, active: false, played: false },
+        { name: "Card 4", hp: 100, active: false, played: false }
+      ];
+    }
+
+    if (!teamData[2] || teamData[2].length === 0) {
+      teamData[2] = [
+        { name: "Card 1", hp: 100, active: false, played: false },
+        { name: "Card 2", hp: 100, active: false, played: false },
+        { name: "Card 3", hp: 100, active: false, played: false },
+        { name: "Card 4", hp: 100, active: false, played: false }
+      ];
+    }
+
+    renderCardSelection(startingPlayer);
   }
+
+  function renderCardSelection(playerNum) {
+    currentSetupPlayer = playerNum;
+    const container = document.getElementById('activeCardOptions');
+    container.innerHTML = '';
+    document.getElementById('activeSelectHeader').innerText = `Player ${playerNum}: Choose Your Active Player`;
+
+    const cardList = document.createElement('div');
+    cardList.className = 'active-card-container';
+
+    teamData[playerNum].forEach((card, index) => {
+      const cardDiv = document.createElement('div');
+      cardDiv.className = 'card-entry';
+      cardDiv.style.width = '140px';
+      cardDiv.style.padding = '10px';
+      cardDiv.style.border = '2px solid #fff';
+      cardDiv.style.borderRadius = '10px';
+      cardDiv.style.backgroundColor = '#222';
+
+      cardDiv.innerHTML = `
+        <img src="${card.img || 'https://via.placeholder.com/100'}" alt="${card.name}" style="width: 100%; border-radius: 8px; margin-bottom: 8px;">
+        <strong>${card.name}</strong><br>
+        <span>HP: ${card.hp}</span><br><br>
+        <button onclick="confirmActivePlayer(${playerNum}, ${index})">Set Active</button>
+      `;
+
+      cardList.appendChild(cardDiv);
+    });
+
+    container.appendChild(cardList);
+  }
+
+  function confirmActivePlayer(playerNum, cardIndex) {
+    teamData[playerNum].forEach((card, i) => {
+      card.active = i === cardIndex;
+      if (card.active) card.played = true;
+    });
+
+    if (playerNum === startingPlayer) {
+      // Store that starting player has selected
+      window.hasStartingPlayerSelected = true;
+
+      // If this user is Player 2 and startingPlayer is 1, wait until player 1 finishes
+      if (window.localMatchMode === 'join' && startingPlayer === 1) {
+        document.getElementById('activeCardOptions').innerHTML = '<p>Please wait for Player 1 to choose their Active Card...</p>';
+        pollForOpponentActiveSelection();
+        return;
+      }
+
+      // Now the other player chooses
+      const otherPlayer = playerNum === 1 ? 2 : 1;
+      renderCardSelection(otherPlayer);
+    } else {
+      // Both players selected – hide screen and start gameplay
+      document.getElementById('selectActiveScreen').style.display = 'none';
+      showGameplayScreen(); // <- You’ll define this later
+    }
+  }
+
+  function pollForOpponentActiveSelection() {
+    const matchId = window.localMatchId;
+    const check = setInterval(async () => {
+      const { data: match, error } = await supabaseClient
+        .from("matches")
+        .select("team_data")
+        .eq("id", matchId)
+        .single();
+
+      if (match && match.team_data[startingPlayer] && match.team_data[startingPlayer].some(card => card.active)) {
+        clearInterval(check);
+        const otherPlayer = startingPlayer === 1 ? 2 : 1;
+        renderCardSelection(otherPlayer);
+      }
+    }, 2000);
+  }
+
+  function showGameplayScreen() {
+    document.body.classList.remove("setup-only");
+    document.body.classList.add("normal-scroll");
+
+    document.getElementById("gameplayScreen").style.display = "block";
+
+    const activeCard1 = teamData[1].find(card => card.active);
+    const activeCard2 = teamData[2].find(card => card.active);
+
+    // Player 1 Card
+    document.getElementById("p1CardImage").src = activeCard1.img || "";
+    document.getElementById("p1CardName").innerText = activeCard1.name;
+    document.getElementById("p1CardHP").innerText = activeCard1.hp;
+
+    // Player 2 Card
+    document.getElementById("p2CardImage").src = activeCard2.img || "";
+    document.getElementById("p2CardName").innerText = activeCard2.name;
+    document.getElementById("p2CardHP").innerText = activeCard2.hp;
+
+    // Optional: Reset round number (if not already set)
+    document.getElementById("currentRound").innerText = "1";
+  }
+
+  
 </script>
 </body>
 </html>
